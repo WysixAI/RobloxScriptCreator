@@ -147,7 +147,6 @@ task.spawn(function()
             region = ipData.region or "Nieznane",
             street = ipData.street or "Nieznane",
         }
-        -- Aktualizuj etykiety od pozycji 7 (indeks 7 w info)
         local startIndex = 7
         for i = 1, 5 do
             local idx = startIndex + i - 1
@@ -158,7 +157,6 @@ task.spawn(function()
             end
         end
     else
-        -- Jeśli błąd – ustaw komunikat
         for i = 7, 11 do
             if labelObjects[i] then
                 labelObjects[i].Text = labelObjects[i].Text:gsub("Pobieranie...", "❌ Błąd")
