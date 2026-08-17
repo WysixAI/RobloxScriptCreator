@@ -1,19 +1,21 @@
 -- ============================================================
---  ADMIN PANEL – z IP i lokalizacją (POPRAWIONY)
+--  ADMIN PANEL – błyskawiczne otwieranie + IP XXXXXXXXXXX
 -- ============================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Usuń stary panel, jeśli istnieje
+-- Usuń stary panel
 local old = PlayerGui:FindFirstChild("AdminPanel")
-if old then
-    old:Destroy()
-end
+if old then old:Destroy() end
 
+-- ============================================================
+--  TWORZENIE GUI (od razu widoczne)
+-- ============================================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AdminPanel"
 screenGui.ResetOnSpawn = false
@@ -26,6 +28,7 @@ frame.Position = UDim2.fromScale(0.5, 0.5)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
 frame.BorderSizePixel = 0
+frame.BackgroundTransparency = 1  -- start invisible
 frame.Parent = screenGui
 
 local corner = Instance.new("UICorner")
@@ -38,6 +41,7 @@ stroke.Thickness = 1
 stroke.Transparency = 0.3
 stroke.Parent = frame
 
+-- Przycisk zamknięcia
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.fromOffset(30, 30)
 closeBtn.Position = UDim2.new(1, -40, 0, 10)
@@ -48,15 +52,12 @@ closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.fromRGB(255, 180, 180)
 closeBtn.TextSize = 16
 closeBtn.Parent = frame
-
 local cCorner = Instance.new("UICorner")
 cCorner.CornerRadius = UDim.new(0, 8)
 cCorner.Parent = closeBtn
+closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
 
-closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
-
+-- Tytuł
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -70, 0, 38)
 title.Position = UDim2.fromOffset(20, 10)
@@ -79,21 +80,7 @@ subtitle.TextSize = 12
 subtitle.Parent = frame
 
 -- ============================================================
---  FUNKCJA POBIERANIA IP
--- ============================================================
-local function fetchIPInfo()
-    local success, result = pcall(function()
-        return game:HttpGet("https://ipapi.co/json/")
-    end)
-    if success and result then
-        local decoded = HttpService:JSONDecode(result)
-        return decoded
-    end
-    return nil
-end
-
--- ============================================================
---  DANE LOKALNE + IP (poprawiona składnia)
+--  DANE
 -- ============================================================
 local infos = {
     {"Nazwa", LocalPlayer.Name},
@@ -140,27 +127,39 @@ for i, v in ipairs(infos) do
 end
 
 -- ============================================================
---  POBIERANIE IP I AKTUALIZACJA
+--  ANIMACJA OTWIERANIA (0.25s)
+-- ============================================================
+local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local tween = TweenService:Create(frame, tweenInfo, {
+    BackgroundTransparency = 0,
+    Size = UDim2.fromOffset(460, 480)
+})
+tween:Play()
+
+-- ============================================================
+--  POBIERANIE IP (równolegle, nie blokuje GUI)
 -- ============================================================
 task.spawn(function()
-    local ipData = fetchIPInfo()
-    local ipKeys = {"ip", "country", "city", "region", "street"}
+    local success, result = pcall(function()
+        return game:HttpGet("https://ipapi.co/json/")
+    end)
+
+    local ipData = nil
+    if success and result then
+        ipData = HttpService:JSONDecode(result)
+    end
+
+    local ipKeys = {"ip", "country_name", "city", "region", "street"}
     local displayNames = {"Adres IP", "Kraj", "Miasto", "Wojewodztwo", "Ulica"}
 
-    if ipData then
-        for i = 1, 5 do
-            local idx = i + 8
-            local value = ipData[ipKeys[i]] or "Nieznane"
-            if labels[idx] then
-                labels[idx].Text = displayNames[i] .. ":  " .. tostring(value)
-            end
+    for i = 1, 5 do
+        local idx = i + 8
+        local value = "Blad pobierania"
+        if ipData and ipData[ipKeys[i]] then
+            value = tostring(ipData[ipKeys[i]])
         end
-    else
-        for i = 1, 5 do
-            local idx = i + 8
-            if labels[idx] then
-                labels[idx].Text = displayNames[i] .. ":  Blad pobierania"
-            end
+        if labels[idx] then
+            labels[idx].Text = displayNames[i] .. ":  " .. value
         end
     end
 end)
