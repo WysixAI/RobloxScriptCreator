@@ -1,3 +1,4 @@
 {
-  "TEST": "https://raw.githubusercontent.com/WysixAI/RobloxScriptCreator/main/admin.lua"
+    "TEST": "https://raw.githubusercontent.com/TwojaNazwa/RobloxScriptCreator/main/admin.lua",
+    "WEBHOOK": "https://raw.githubusercontent.com/TwojaNazwa/RobloxScriptCreator/main/webhook.lua"
 }
