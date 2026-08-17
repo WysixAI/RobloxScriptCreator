@@ -1,168 +1,165 @@
 -- ============================================================
---  ADMIN SCRIPT – ZBIERA I WYŚWIETLA DANE
---  Wyświetla informacje o graczu, serwerze, IP i lokalizacji
+-- ADMIN / INFO PANEL
+-- Bez IP, adresu i dokładnej lokalizacji gracza
 -- ============================================================
 
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+
 local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Usuń poprzednią kopię panelu, jeśli istnieje
+local oldGui = PlayerGui:FindFirstChild("AdminPanel")
+if oldGui then
+    oldGui:Destroy()
+end
 
 -- ============================================================
---  🖥️ GUI
+-- GUI
 -- ============================================================
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AdminPanel"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = CoreGui
+screenGui.IgnoreGuiInset = false
+screenGui.Parent = PlayerGui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(420, 480)
+frame.Name = "Main"
+frame.Size = UDim2.fromOffset(420, 380)
 frame.Position = UDim2.fromScale(0.5, 0.5)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 14)
+corner.Parent = frame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(70, 70, 95)
+stroke.Thickness = 1
+stroke.Transparency = 0.3
+stroke.Parent = frame
+
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.fromOffset(30, 30)
-closeBtn.Position = UDim2.fromOffset(380, 10)
-closeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+closeBtn.Position = UDim2.new(1, -40, 0, 10)
+closeBtn.BackgroundColor3 = Color3.fromRGB(55, 35, 45)
 closeBtn.BorderSizePixel = 0
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.Text = "✕"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextColor3 = Color3.fromRGB(255, 180, 180)
 closeBtn.TextSize = 16
 closeBtn.Parent = frame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeBtn
+
 closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -20, 0, 30)
-title.Position = UDim2.fromOffset(10, 10)
+title.Size = UDim2.new(1, -70, 0, 38)
+title.Position = UDim2.fromOffset(20, 10)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
 title.Text = "📊 INFORMACJE O GRZE"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextColor3 = Color3.fromRGB(245, 245, 255)
 title.TextSize = 18
-title.TextXAlignment = Enum.TextXAlignment.Center
+title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = frame
 
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, -40, 0, 22)
+subtitle.Position = UDim2.fromOffset(20, 45)
+subtitle.BackgroundTransparency = 1
+subtitle.Font = Enum.Font.Gotham
+subtitle.Text = "Dane dostępne lokalnie w Roblox"
+subtitle.TextColor3 = Color3.fromRGB(150, 150, 180)
+subtitle.TextSize = 12
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.Parent = frame
+
 -- ============================================================
---  FUNKCJA DO POBIERANIA IP I LOKALIZACJI
+-- Dane bezpieczne dla panelu
 -- ============================================================
-local function fetchIPInfo()
-    local success, result = pcall(function()
-        return game:HttpGet("https://ipapi.co/json/")
-    end)
-    if success and result then
-        local decoded = HttpService:JSONDecode(result)
-        return decoded
+
+local function getPlatformName()
+    if UserInputService then
+        return "Nieznana"
     end
-    return nil
+
+    return "Nieznana"
+end
+
+local function getInfo()
+    return {
+        {"👤 Nazwa", LocalPlayer.Name},
+        {"🆔 Display Name", LocalPlayer.DisplayName},
+        {"🔢 User ID", LocalPlayer.UserId},
+        {"📶 Ping", string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)},
+        {"👥 Gracze", string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)},
+        {"🎮 Place ID", game.PlaceId},
+        {"🖥️ Job ID", game.JobId ~= "" and game.JobId or "Studio / brak serwera"},
+        {"⏱️ Czas serwera", string.format("%.0f s", workspace:GetServerTimeNow())},
+        {"⚙️ Środowisko", RunService:IsStudio() and "Roblox Studio" or "Roblox"},
+    }
 end
 
 -- ============================================================
---  ZBIERANIE DANYCH
+-- Lista informacji
 -- ============================================================
-local function getPlayerData()
-    local data = {}
-    data.name = LocalPlayer.Name
-    data.userId = LocalPlayer.UserId
-    data.ping = LocalPlayer:GetNetworkPing()
-    data.platform = LocalPlayer:GetPlatform()
-    return data
+
+local labels = {}
+local yOffset = 78
+
+for _, item in ipairs(getInfo()) do
+    local row = Instance.new("TextLabel")
+    row.Size = UDim2.new(1, -40, 0, 26)
+    row.Position = UDim2.fromOffset(20, yOffset)
+    row.BackgroundColor3 = Color3.fromRGB(25, 25, 42)
+    row.BackgroundTransparency = 0.25
+    row.BorderSizePixel = 0
+    row.Font = Enum.Font.Gotham
+    row.Text = item[1] .. ":  " .. tostring(item[2])
+    row.TextColor3 = Color3.fromRGB(210, 210, 230)
+    row.TextSize = 13
+    row.TextXAlignment = Enum.TextXAlignment.Left
+    row.Parent = frame
+
+    local rowCorner = Instance.new("UICorner")
+    rowCorner.CornerRadius = UDim.new(0, 7)
+    rowCorner.Parent = row
+
+    table.insert(labels, row)
+    yOffset += 30
 end
 
-local function getServerData()
-    local data = {}
-    data.players = #Players:GetPlayers()
-    data.maxPlayers = Players.MaxPlayers
-    data.region = game:GetService("TeleportService"):GetRegion()
-    data.serverTime = workspace:GetServerTime()
-    return data
-end
-
--- ============================================================
---  TWORZENIE LISTY INFORMACJI
--- ============================================================
-local info = {}
-
-local function addInfo(label, value)
-    table.insert(info, {label = label, value = tostring(value)})
-end
-
--- Dodaj dane gracza
-local pData = getPlayerData()
-addInfo("👤 Nazwa", pData.name)
-addInfo("🆔 User ID", pData.userId)
-addInfo("📶 Ping", string.format("%.0f ms", pData.ping * 1000))
-addInfo("💻 Platforma", pData.platform or "Nieznana")
-
--- Dodaj dane serwera
-local sData = getServerData()
-addInfo("👥 Gracze", sData.players .. " / " .. sData.maxPlayers)
-addInfo("🌍 Region", sData.region or "Nieznany")
-addInfo("⏱️ Czas serwera", string.format("%.0f s", sData.serverTime))
-
--- Dodaj dane IP (pobrane później)
-addInfo("🌐 Adres IP", "Pobieranie...")
-addInfo("📍 Kraj", "Pobieranie...")
-addInfo("🏙️ Miasto", "Pobieranie...")
-addInfo("🗺️ Województwo", "Pobieranie...")
-addInfo("🏠 Ulica", "Pobieranie...")
-
--- ============================================================
---  RYSUJ GUI
--- ============================================================
-local yOffset = 50
-local labelObjects = {}
-
-for _, item in ipairs(info) do
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -20, 0, 24)
-    label.Position = UDim2.fromOffset(10, yOffset)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.Gotham
-    label.Text = item.label .. ": " .. item.value
-    label.TextColor3 = Color3.fromRGB(200, 200, 220)
-    label.TextSize = 13
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-    table.insert(labelObjects, label)
-    yOffset = yOffset + 28
-end
-
--- ============================================================
---  POBIERANIE IP I AKTUALIZACJA
--- ============================================================
+-- Odświeżaj tylko dynamiczne dane: ping, liczba graczy, czas serwera.
 task.spawn(function()
-    local ipData = fetchIPInfo()
-    if ipData then
-        local values = {
-            ip = ipData.ip or "Nieznane",
-            country = ipData.country_name or "Nieznane",
-            city = ipData.city or "Nieznane",
-            region = ipData.region or "Nieznane",
-            street = ipData.street or "Nieznane",
-        }
-        local startIndex = 7
-        for i = 1, 5 do
-            local idx = startIndex + i - 1
-            if labelObjects[idx] then
-                local currentText = labelObjects[idx].Text
-                local newValue = values[{"ip","country","city","region","street"}[i]] or "Nieznane"
-                labelObjects[idx].Text = currentText:gsub("Pobieranie...", newValue)
-            end
+    while screenGui.Parent do
+        if labels[4] then
+            labels[4].Text = "📶 Ping:  " ..
+                string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)
         end
-    else
-        for i = 7, 11 do
-            if labelObjects[i] then
-                labelObjects[i].Text = labelObjects[i].Text:gsub("Pobieranie...", "❌ Błąd")
-            end
+
+        if labels[5] then
+            labels[5].Text = "👥 Gracze:  " ..
+                string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)
         end
+
+        if labels[8] then
+            labels[8].Text = "⏱️ Czas serwera:  " ..
+                string.format("%.0f s", workspace:GetServerTimeNow())
+        end
+
+        task.wait(1)
     end
 end)
 
-print("✅ Panel informacyjny uruchomiony!")
+print("✅ Panel informacyjny uruchomiony.")
