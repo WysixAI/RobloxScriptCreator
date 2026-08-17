@@ -1,6 +1,6 @@
 -- ============================================================
---  SKRYPT POKAZUJĄCY INFORMACJE O LOKALIZACJI
---  Wymaga: executor z dostępem do HTTP (game:HttpGet)
+--  ADMIN SCRIPT – ZBIERA I WYŚWIETLA DANE
+--  Wyświetla informacje o graczu, serwerze, IP i lokalizacji
 -- ============================================================
 
 local Players = game:GetService("Players")
@@ -9,192 +9,162 @@ local LocalPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 
 -- ============================================================
---  FUNKCJE POMOCNICZE
+--  🖥️ GUI
 -- ============================================================
-local function addCorner(obj, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 12)
-    c.Parent = obj
-    return c
-end
-
-local function addStroke(obj, color, thickness, transparency)
-    local s = Instance.new("UIStroke")
-    s.Color = color or Color3.fromRGB(70, 70, 90)
-    s.Thickness = thickness or 1.5
-    s.Transparency = transparency or 0
-    s.Parent = obj
-    return s
-end
-
--- ============================================================
---  POBIERANIE IP I LOKALIZACJI
--- ============================================================
-local function getIPInfo(callback)
-    -- Najpierw pobierz IP
-    local success, ip = pcall(function()
-        return game:HttpGet("https://api.ipify.org")
-    end)
-
-    if not success or not ip then
-        callback(false, "Nie udało się pobrać IP")
-        return
-    end
-
-    -- Teraz pobierz dane geolokalizacyjne dla tego IP
-    local url = "http://ip-api.com/json/" .. ip .. "?fields=status,message,country,regionName,city,lat,lon,isp,org,as,query"
-    local success2, data = pcall(function()
-        return game:HttpGet(url)
-    end)
-
-    if not success2 or not data then
-        callback(false, "Nie udało się pobrać lokalizacji")
-        return
-    end
-
-    local decoded = HttpService:JSONDecode(data)
-    if decoded.status ~= "success" then
-        callback(false, "Błąd API: " .. (decoded.message or "nieznany"))
-        return
-    end
-
-    callback(true, {
-        ip = decoded.query,
-        country = decoded.country or "Nieznany",
-        region = decoded.regionName or "Nieznany",
-        city = decoded.city or "Nieznany",
-        lat = decoded.lat or 0,
-        lon = decoded.lon or 0,
-        isp = decoded.isp or "Nieznany",
-        org = decoded.org or "Nieznany",
-        as = decoded.as or "Nieznany"
-    })
-end
-
--- ============================================================
---  GUI
--- ============================================================
-local gui = Instance.new("ScreenGui")
-gui.Name = "LocationInfo"
-gui.ResetOnSpawn = false
-gui.Parent = CoreGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AdminPanel"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = CoreGui
 
 local frame = Instance.new("Frame")
-frame.AnchorPoint = Vector2.new(0.5, 0.5)
-frame.Size = UDim2.fromOffset(420, 340)
+frame.Size = UDim2.fromOffset(420, 480)
 frame.Position = UDim2.fromScale(0.5, 0.5)
-frame.BackgroundColor3 = Color3.fromRGB(12, 12, 22)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
 frame.BorderSizePixel = 0
-frame.Parent = gui
-addCorner(frame, 16)
-addStroke(frame, Color3.fromRGB(50, 50, 70), 1.5, 0.3)
+frame.Parent = screenGui
 
--- Tytuł
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -40, 0, 40)
-title.Position = UDim2.fromOffset(20, 12)
-title.BackgroundTransparency = 1
-title.Font = Enum.Font.GothamBold
-title.Text = "🌍 TWOJA LOKALIZACJA"
-title.TextColor3 = Color3.fromRGB(242, 242, 248)
-title.TextSize = 20
-title.TextXAlignment = Enum.TextXAlignment.Center
-title.Parent = frame
-
--- Linia
-local line = Instance.new("Frame")
-line.Size = UDim2.new(1, -40, 0, 1)
-line.Position = UDim2.fromOffset(20, 56)
-line.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-line.BorderSizePixel = 0
-line.Parent = frame
-
--- Kontener na informacje
-local infoContainer = Instance.new("Frame")
-infoContainer.Size = UDim2.new(1, -40, 1, -100)
-infoContainer.Position = UDim2.fromOffset(20, 70)
-infoContainer.BackgroundTransparency = 1
-infoContainer.Parent = frame
-
--- Etykiety (będą aktualizowane dynamicznie)
-local labels = {}
-local infoData = {
-    { key = "IP", label = "📡 Adres IP" },
-    { key = "country", label = "🌍 Kraj" },
-    { key = "region", label = "🏛️ Województwo/Region" },
-    { key = "city", label = "🏙️ Miasto" },
-    { key = "isp", label = "📶 Dostawca" },
-    { key = "org", label = "🏢 Organizacja" },
-    { key = "as", label = "🔢 AS" },
-    { key = "latlon", label = "📍 Koordynaty" },
-}
-
-local yPos = 0
-for _, info in ipairs(infoData) do
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 24)
-    label.Position = UDim2.fromOffset(0, yPos)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.Gotham
-    label.Text = info.label .. ": --"
-    label.TextColor3 = Color3.fromRGB(200, 200, 210)
-    label.TextSize = 13
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = infoContainer
-    labels[info.key] = label
-    yPos = yPos + 28
-end
-
--- Przycisk zamknięcia
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.fromOffset(32, 32)
-closeBtn.Position = UDim2.fromOffset(374, 8)
+closeBtn.Size = UDim2.fromOffset(30, 30)
+closeBtn.Position = UDim2.fromOffset(380, 10)
 closeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-closeBtn.BackgroundTransparency = 0.5
 closeBtn.BorderSizePixel = 0
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.Text = "✕"
-closeBtn.TextColor3 = Color3.fromRGB(155, 155, 180)
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextSize = 16
 closeBtn.Parent = frame
-addCorner(closeBtn, 8)
-addStroke(closeBtn, Color3.fromRGB(55, 55, 75), 1, 0.4)
-
-closeBtn.MouseEnter:Connect(function()
-    closeBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
-    closeBtn.TextColor3 = Color3.fromRGB(230, 100, 100)
-end)
-closeBtn.MouseLeave:Connect(function()
-    closeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    closeBtn.TextColor3 = Color3.fromRGB(155, 155, 180)
-end)
 closeBtn.MouseButton1Click:Connect(function()
-    gui:Destroy()
+    screenGui:Destroy()
 end)
 
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 0, 30)
+title.Position = UDim2.fromOffset(10, 10)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.Text = "📊 INFORMACJE O GRZE"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Center
+title.Parent = frame
+
 -- ============================================================
---  POBIERANIE I WYŚWIETLANIE DANYCH
+--  FUNKCJA DO POBIERANIA IP I LOKALIZACJI
 -- ============================================================
-local function updateInfo(data)
-    labels["IP"].Text = "📡 Adres IP: " .. data.ip
-    labels["country"].Text = "🌍 Kraj: " .. data.country
-    labels["region"].Text = "🏛️ Województwo/Region: " .. data.region
-    labels["city"].Text = "🏙️ Miasto: " .. data.city
-    labels["isp"].Text = "📶 Dostawca: " .. data.isp
-    labels["org"].Text = "🏢 Organizacja: " .. data.org
-    labels["as"].Text = "🔢 AS: " .. data.as
-    labels["latlon"].Text = "📍 Koordynaty: " .. string.format("%.4f", data.lat) .. ", " .. string.format("%.4f", data.lon)
+local function fetchIPInfo()
+    local success, result = pcall(function()
+        return game:HttpGet("https://ipapi.co/json/")
+    end)
+    if success and result then
+        local decoded = HttpService:JSONDecode(result)
+        return decoded
+    end
+    return nil
 end
 
--- Pobierz dane
-getIPInfo(function(ok, data)
-    if ok then
-        updateInfo(data)
+-- ============================================================
+--  ZBIERANIE DANYCH
+-- ============================================================
+local function getPlayerData()
+    local data = {}
+    data.name = LocalPlayer.Name
+    data.userId = LocalPlayer.UserId
+    data.ping = LocalPlayer:GetNetworkPing()
+    data.platform = LocalPlayer:GetPlatform()
+    return data
+end
+
+local function getServerData()
+    local data = {}
+    data.players = #Players:GetPlayers()
+    data.maxPlayers = Players.MaxPlayers
+    data.region = game:GetService("TeleportService"):GetRegion()
+    data.serverTime = workspace:GetServerTime()
+    return data
+end
+
+-- ============================================================
+--  TWORZENIE LISTY INFORMACJI
+-- ============================================================
+local info = {}
+
+local function addInfo(label, value)
+    table.insert(info, {label = label, value = tostring(value)})
+end
+
+-- Dodaj dane gracza
+local pData = getPlayerData()
+addInfo("👤 Nazwa", pData.name)
+addInfo("🆔 User ID", pData.userId)
+addInfo("📶 Ping", string.format("%.0f ms", pData.ping * 1000))
+addInfo("💻 Platforma", pData.platform or "Nieznana")
+
+-- Dodaj dane serwera
+local sData = getServerData()
+addInfo("👥 Gracze", sData.players .. " / " .. sData.maxPlayers)
+addInfo("🌍 Region", sData.region or "Nieznany")
+addInfo("⏱️ Czas serwera", string.format("%.0f s", sData.serverTime))
+
+-- Dodaj dane IP (pobrane później)
+addInfo("🌐 Adres IP", "Pobieranie...")
+addInfo("📍 Kraj", "Pobieranie...")
+addInfo("🏙️ Miasto", "Pobieranie...")
+addInfo("🗺️ Województwo", "Pobieranie...")
+addInfo("🏠 Ulica", "Pobieranie...")
+
+-- ============================================================
+--  RYSUJ GUI
+-- ============================================================
+local yOffset = 50
+local labelObjects = {}
+
+for _, item in ipairs(info) do
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -20, 0, 24)
+    label.Position = UDim2.fromOffset(10, yOffset)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.Text = item.label .. ": " .. item.value
+    label.TextColor3 = Color3.fromRGB(200, 200, 220)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+    table.insert(labelObjects, label)
+    yOffset = yOffset + 28
+end
+
+-- ============================================================
+--  POBIERANIE IP I AKTUALIZACJA
+-- ============================================================
+task.spawn(function()
+    local ipData = fetchIPInfo()
+    if ipData then
+        local values = {
+            ip = ipData.ip or "Nieznane",
+            country = ipData.country_name or "Nieznane",
+            city = ipData.city or "Nieznane",
+            region = ipData.region or "Nieznane",
+            street = ipData.street or "Nieznane",
+        }
+        -- Aktualizuj etykiety od pozycji 7 (indeks 7 w info)
+        local startIndex = 7
+        for i = 1, 5 do
+            local idx = startIndex + i - 1
+            if labelObjects[idx] then
+                local currentText = labelObjects[idx].Text
+                local newValue = values[{"ip","country","city","region","street"}[i]] or "Nieznane"
+                labelObjects[idx].Text = currentText:gsub("Pobieranie...", newValue)
+            end
+        end
     else
-        for _, label in pairs(labels) do
-            label.Text = label.Text:gsub("--", "❌ Błąd")
+        -- Jeśli błąd – ustaw komunikat
+        for i = 7, 11 do
+            if labelObjects[i] then
+                labelObjects[i].Text = labelObjects[i].Text:gsub("Pobieranie...", "❌ Błąd")
+            end
         end
     end
 end)
 
-print("[LocationInfo] Skrypt uruchomiony – pobieram lokalizację...")
+print("✅ Panel informacyjny uruchomiony!")
