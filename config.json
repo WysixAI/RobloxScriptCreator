@@ -1,1 +1,5 @@
-
+{
+    "ID1": "https://raw.githubusercontent.com/.../skrypt1.lua",
+    "ID2": "https://raw.githubusercontent.com/.../skrypt2.lua",
+    "MOJEID": "https://raw.githubusercontent.com/.../moj_skrypt.lua"
+}
