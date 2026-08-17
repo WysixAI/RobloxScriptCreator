@@ -1,5 +1,5 @@
 -- ============================================================
---  ADMIN PANEL – z IP i lokalizacją
+--  ADMIN PANEL – z IP i lokalizacją (POPRAWIONY)
 -- ============================================================
 
 local Players = game:GetService("Players")
@@ -62,7 +62,7 @@ title.Size = UDim2.new(1, -70, 0, 38)
 title.Position = UDim2.fromOffset(20, 10)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
-title.Text = "📊 INFORMACJE O GRZE"
+title.Text = "INFORMACJE O GRZE"
 title.TextColor3 = Color3.fromRGB(245, 245, 255)
 title.TextSize = 18
 title.TextXAlignment = Enum.TextXAlignment.Left
@@ -93,30 +93,27 @@ local function fetchIPInfo()
 end
 
 -- ============================================================
---  DANE LOKALNE + IP
+--  DANE LOKALNE + IP (poprawiona składnia)
 -- ============================================================
-
 local infos = {
-    {"👤 Nazwa", LocalPlayer.Name},
-    {"🆔 User ID", tostring(LocalPlayer.UserId)},
-    {"📶 Ping", string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)},
-    {"👥 Gracze", string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)},
-    {"🎮 Place ID", tostring(game.PlaceId)},
-    {"🖥️ Job ID", (game.JobId ~= "" and game.JobId) or "Brak / Studio"},
-    {"⏱️ Serwer czas", string.format("%.0f s", workspace:GetServerTimeNow())},
-    {"⚙️ Środowisko", RunService:IsStudio() and "Roblox Studio" or "Gracz"},
-    -- IP i lokalizacja – będą zaktualizowane po pobraniu
-    {"🌐 Adres IP", "Pobieranie..."},
-    {"📍 Kraj", "Pobieranie..."},
-    {"🏙️ Miasto", "Pobieranie..."},
-    {"🗺️ Województwo", "Pobieranie..."},
-    {"🏠 Ulica", "Pobieranie..."},
+    {"Nazwa", LocalPlayer.Name},
+    {"User ID", tostring(LocalPlayer.UserId)},
+    {"Ping", string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)},
+    {"Gracze", string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)},
+    {"Place ID", tostring(game.PlaceId)},
+    {"Job ID", (game.JobId ~= "" and game.JobId) or "Brak"},
+    {"Czas serwera", string.format("%.0f s", workspace:GetServerTime())},
+    {"Srodowisko", RunService:IsStudio() and "Roblox Studio" or "Gracz"},
+    {"Adres IP", "Pobieranie..."},
+    {"Kraj", "Pobieranie..."},
+    {"Miasto", "Pobieranie..."},
+    {"Wojewodztwo", "Pobieranie..."},
+    {"Ulica", "Pobieranie..."}
 }
 
 -- ============================================================
 --  RYSOWANIE LISTY
 -- ============================================================
-
 local labels = {}
 local y = 78
 
@@ -145,31 +142,24 @@ end
 -- ============================================================
 --  POBIERANIE IP I AKTUALIZACJA
 -- ============================================================
-
 task.spawn(function()
     local ipData = fetchIPInfo()
+    local ipKeys = {"ip", "country", "city", "region", "street"}
+    local displayNames = {"Adres IP", "Kraj", "Miasto", "Wojewodztwo", "Ulica"}
+
     if ipData then
-        local values = {
-            ip = ipData.ip or "Nieznane",
-            country = ipData.country_name or "Nieznane",
-            city = ipData.city or "Nieznane",
-            region = ipData.region or "Nieznane",
-            street = ipData.street or "Nieznane",
-        }
-        -- Aktualizuj etykiety od indeksu 9 do 13
-        for i = 9, 13 do
-            if labels[i] then
-                local key = {"ip", "country", "city", "region", "street"}[i - 8]
-                local newValue = values[key] or "Nieznane"
-                local currentText = labels[i].Text
-                labels[i].Text = currentText:gsub("Pobieranie...", newValue)
+        for i = 1, 5 do
+            local idx = i + 8
+            local value = ipData[ipKeys[i]] or "Nieznane"
+            if labels[idx] then
+                labels[idx].Text = displayNames[i] .. ":  " .. tostring(value)
             end
         end
     else
-        -- Jeśli błąd – ustaw komunikat
-        for i = 9, 13 do
-            if labels[i] then
-                labels[i].Text = labels[i].Text:gsub("Pobieranie...", "❌ Błąd")
+        for i = 1, 5 do
+            local idx = i + 8
+            if labels[idx] then
+                labels[idx].Text = displayNames[i] .. ":  Blad pobierania"
             end
         end
     end
@@ -178,20 +168,19 @@ end)
 -- ============================================================
 --  AKTUALIZACJA DYNAMICZNA (ping, gracze, czas)
 -- ============================================================
-
 task.spawn(function()
     while screenGui and screenGui.Parent do
         if labels[3] then
-            labels[3].Text = "📶 Ping:  " .. string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)
+            labels[3].Text = "Ping:  " .. string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)
         end
         if labels[4] then
-            labels[4].Text = "👥 Gracze:  " .. string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)
+            labels[4].Text = "Gracze:  " .. string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)
         end
         if labels[7] then
-            labels[7].Text = "⏱️ Serwer czas:  " .. string.format("%.0f s", workspace:GetServerTimeNow())
+            labels[7].Text = "Czas serwera:  " .. string.format("%.0f s", workspace:GetServerTime())
         end
         task.wait(1)
     end
 end)
 
-print("✅ AdminPanel załadowany poprawnie.")
+print("AdminPanel zaladowany poprawnie.")
