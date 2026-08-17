@@ -1,199 +1,372 @@
 -- ============================================================
---  PROSTY LOADER Z SYSTEMEM ID
---  Pobiera konfigurację z GitHub i uruchamia skrypty po ID
+--  PRZYKŁADOWY SKRYPT – KATEGORIE I FUNKCJE
+--  Wrzuć ten kod na GitHub jako np. "moj_skrypt.lua"
+--  Loader pobierze go i uruchomi po wpisaniu odpowiedniego ID
 -- ============================================================
 
+print("✅ Skrypt załadowany!")
+
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
-local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ============================================================
---  🔗 USTAWI SWÓJ LINK DO KONFIGURACJI (config.json)
+--  🔧 FUNKCJE POMOCNICZE
 -- ============================================================
-local BASE_RAW_URL = "https://raw.githubusercontent.com/TwojaNazwa/TwojeRepo/main/config.json"
 
--- ============================================================
---  FUNKCJE POMOCNICZE
--- ============================================================
-local function addCorner(obj, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 10)
-    c.Parent = obj
-    return c
+local function notify(text, duration)
+    duration = duration or 3
+    local notif = Instance.new("ScreenGui")
+    notif.Parent = game:GetService("CoreGui")
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.fromOffset(400, 50)
+    frame.Position = UDim2.fromScale(0.5, 0.9)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    frame.BorderSizePixel = 0
+    frame.Parent = notif
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = frame
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -20, 1, 0)
+    label.Position = UDim2.fromOffset(10, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(240, 240, 248)
+    label.TextSize = 16
+    label.TextWrapped = true
+    label.Parent = frame
+    task.wait(duration)
+    notif:Destroy()
 end
 
-local function addStroke(obj, color, thickness, transparency)
-    local s = Instance.new("UIStroke")
-    s.Color = color or Color3.fromRGB(70, 70, 90)
-    s.Thickness = thickness or 1
-    s.Transparency = transparency or 0
-    s.Parent = obj
-    return s
+local function getCharacter()
+    return LocalPlayer.Character
+end
+
+local function getHumanoid()
+    local char = getCharacter()
+    if char then return char:FindFirstChild("Humanoid") end
+    return nil
 end
 
 -- ============================================================
---  POBIERANIE KONFIGURACJI Z GITHUB
+--  📂 KATEGORIA: ADMIN
 -- ============================================================
-local function fetchConfig(callback)
-    local success, result = pcall(function()
-        return HttpService:GetAsync(BASE_RAW_URL)
-    end)
 
-    if success and result then
-        local decoded = HttpService:JSONDecode(result)
-        callback(true, decoded)
-    else
-        callback(false, "Nie udało się pobrać konfiguracji: " .. tostring(result))
-    end
-end
+local Admin = {}
 
--- ============================================================
---  POBIERANIE I URUCHAMIANIE SKRYPTU
--- ============================================================
-local function runScript(rawUrl)
-    local success, result = pcall(function()
-        return HttpService:GetAsync(rawUrl)
-    end)
-
-    if success and result then
-        local fn, err = loadstring(result)
-        if fn then
-            pcall(fn)
-            status.Text = "✅ Skrypt uruchomiony!"
-            status.TextColor3 = Color3.fromRGB(100, 210, 140)
-        else
-            status.Text = "❌ Błąd kompilacji: " .. tostring(err)
-            status.TextColor3 = Color3.fromRGB(230, 100, 100)
+function Admin.Kick(targetName)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Name:lower():find(targetName:lower()) then
+            if player ~= LocalPlayer then
+                player:Kick("You were kicked by " .. LocalPlayer.Name)
+                notify("Kicked: " .. player.Name)
+                return
+            end
         end
+    end
+    notify("Player not found: " .. targetName)
+end
+
+function Admin.Ban(targetName)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Name:lower():find(targetName:lower()) then
+            if player ~= LocalPlayer then
+                -- W Roblox ban to zwykle kick z powodem
+                player:Kick("You were banned by " .. LocalPlayer.Name)
+                notify("Banned: " .. player.Name)
+                return
+            end
+        end
+    end
+    notify("Player not found: " .. targetName)
+end
+
+function Admin.Mute(targetName)
+    -- Przykładowa funkcja – w zależności od gry
+    notify("Muted: " .. targetName)
+end
+
+function Admin.GiveRank(targetName, rank)
+    notify("Rank " .. rank .. " given to " .. targetName)
+end
+
+function Admin.Reset(targetName)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Name:lower():find(targetName:lower()) then
+            local char = player.Character
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid.Health = 0
+                notify("Reset: " .. player.Name)
+                return
+            end
+        end
+    end
+    notify("Player not found: " .. targetName)
+end
+
+-- ============================================================
+--  📂 KATEGORIA: FUN
+-- ============================================================
+
+local Fun = {}
+
+local flying = false
+local flySpeed = 50
+local flyBodyVelocity = nil
+
+function Fun.Fly()
+    local char = getCharacter()
+    if not char then return end
+    local humanoid = char:FindFirstChild("Humanoid")
+    if not humanoid then return end
+
+    flying = not flying
+    if flying then
+        humanoid.PlatformStand = true
+        flyBodyVelocity = Instance.new("BodyVelocity")
+        flyBodyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+        flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        flyBodyVelocity.Parent = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+        notify("✈️ Fly ON")
     else
-        status.Text = "❌ Błąd pobierania skryptu: " .. tostring(result)
-        status.TextColor3 = Color3.fromRGB(230, 100, 100)
+        humanoid.PlatformStand = false
+        if flyBodyVelocity then flyBodyVelocity:Destroy() end
+        flyBodyVelocity = nil
+        notify("✈️ Fly OFF")
+    end
+end
+
+function Fun.Fling(targetName)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Name:lower():find(targetName:lower()) then
+            local char = player.Character
+            if char then
+                local root = char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    root.Velocity = Vector3.new(0, 200, 0)
+                    notify("Flinged: " .. player.Name)
+                    return
+                end
+            end
+        end
+    end
+    notify("Player not found: " .. targetName)
+end
+
+function Fun.SpeedBoost(multiplier)
+    local humanoid = getHumanoid()
+    if humanoid then
+        humanoid.WalkSpeed = humanoid.WalkSpeed * (multiplier or 2)
+        notify("Speed: " .. humanoid.WalkSpeed)
+    end
+end
+
+function Fun.JumpBoost(multiplier)
+    local humanoid = getHumanoid()
+    if humanoid then
+        humanoid.JumpPower = humanoid.JumpPower * (multiplier or 2)
+        notify("Jump: " .. humanoid.JumpPower)
+    end
+end
+
+function Fun.Invisible()
+    local char = getCharacter()
+    if char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = part.Transparency == 0 and 1 or 0
+            end
+        end
+        notify("Invisible toggled")
     end
 end
 
 -- ============================================================
---  GUI
+--  📂 KATEGORIA: STATS
 -- ============================================================
-local gui = Instance.new("ScreenGui")
-gui.Name = "LoaderID"
-gui.ResetOnSpawn = false
-gui.Parent = CoreGui
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "Main"
-mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-mainFrame.Size = UDim2.fromOffset(360, 200)
-mainFrame.Position = UDim2.fromScale(0.5, 0.5)
-mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 30)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = gui
-addCorner(mainFrame, 16)
-addStroke(mainFrame, Color3.fromRGB(55, 55, 75), 1.5, 0.3)
+local Stats = {}
 
--- Tytuł
-local title = Instance.new("TextLabel")
-title.BackgroundTransparency = 1
-title.Size = UDim2.new(1, -40, 0, 36)
-title.Position = UDim2.fromOffset(20, 12)
-title.Font = Enum.Font.GothamBold
-title.Text = "LOADER ID"
-title.TextColor3 = Color3.fromRGB(242, 242, 248)
-title.TextSize = 22
-title.TextXAlignment = Enum.TextXAlignment.Center
-title.Parent = mainFrame
+function Stats.GetLevel()
+    -- Większość gier ma Leaderstats
+    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+    if leaderstats then
+        local level = leaderstats:FindFirstChild("Level")
+        if level then
+            notify("Level: " .. tostring(level.Value))
+            return
+        end
+    end
+    notify("Level not found")
+end
 
--- Status
-local status = Instance.new("TextLabel")
-status.BackgroundTransparency = 1
-status.Size = UDim2.new(1, -40, 0, 22)
-status.Position = UDim2.fromOffset(20, 54)
-status.Font = Enum.Font.Gotham
-status.Text = "Ładowanie konfiguracji..."
-status.TextColor3 = Color3.fromRGB(155, 155, 180)
-status.TextSize = 12
-status.TextXAlignment = Enum.TextXAlignment.Center
-status.Parent = mainFrame
+function Stats.GetCash()
+    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+    if leaderstats then
+        local cash = leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money")
+        if cash then
+            notify("Cash: " .. tostring(cash.Value))
+            return
+        end
+    end
+    notify("Cash not found")
+end
 
--- Pole ID
-local idBox = Instance.new("TextBox")
-idBox.Size = UDim2.fromOffset(200, 36)
-idBox.Position = UDim2.fromOffset(80, 86)
-idBox.BackgroundColor3 = Color3.fromRGB(14, 14, 24)
-idBox.BorderSizePixel = 0
-idBox.Font = Enum.Font.Gotham
-idBox.TextColor3 = Color3.fromRGB(242, 242, 248)
-idBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 130)
-idBox.TextSize = 14
-idBox.PlaceholderText = "Wpisz ID..."
-idBox.Text = ""
-idBox.ClearTextOnFocus = true
-idBox.Parent = mainFrame
-addCorner(idBox, 10)
-addStroke(idBox, Color3.fromRGB(55, 55, 75), 1, 0.4)
+function Stats.GetPlaytime()
+    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+    if leaderstats then
+        local playtime = leaderstats:FindFirstChild("Playtime")
+        if playtime then
+            notify("Playtime: " .. tostring(playtime.Value) .. "s")
+            return
+        end
+    end
+    notify("Playtime not found")
+end
 
--- Przycisk Uruchom
-local runBtn = Instance.new("TextButton")
-runBtn.Size = UDim2.fromOffset(120, 36)
-runBtn.Position = UDim2.fromOffset(120, 138)
-runBtn.BackgroundColor3 = Color3.fromRGB(110, 150, 255)
-runBtn.BackgroundTransparency = 0.2
-runBtn.BorderSizePixel = 0
-runBtn.Font = Enum.Font.GothamSemibold
-runBtn.Text = "URUCHOM"
-runBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-runBtn.TextSize = 14
-runBtn.Parent = mainFrame
-addCorner(runBtn, 10)
-addStroke(runBtn, Color3.fromRGB(110, 150, 255), 1.5, 0.3)
+function Stats.GetFriends()
+    local count = #Players:GetPlayers() - 1
+    notify("Friends online: " .. count)
+end
 
 -- ============================================================
---  LOGIKA
+--  📂 KATEGORIA: SERVER
 -- ============================================================
-local configData = nil
 
--- Pobierz konfigurację na starcie
-fetchConfig(function(ok, data)
-    if ok then
-        configData = data
-        status.Text = "✅ Konfiguracja załadowana. Wpisz ID."
-        status.TextColor3 = Color3.fromRGB(100, 210, 140)
+local Server = {}
+
+function Server.GetPing()
+    local ping = game:GetService("Stats"):FindFirstChild("Ping")
+    if ping then
+        notify("Ping: " .. tostring(ping.Value) .. "ms")
     else
-        status.Text = "❌ " .. tostring(data)
-        status.TextColor3 = Color3.fromRGB(230, 100, 100)
+        notify("Ping: N/A")
+    end
+end
+
+function Server.GetPlayerCount()
+    notify("Players: " .. #Players:GetPlayers())
+end
+
+function Server.GetUptime()
+    local uptime = math.floor(os.clock())
+    local hours = math.floor(uptime / 3600)
+    local minutes = math.floor((uptime % 3600) / 60)
+    local seconds = uptime % 60
+    notify(string.format("Uptime: %02d:%02d:%02d", hours, minutes, seconds))
+end
+
+function Server.Broadcast(msg)
+    for _, player in ipairs(Players:GetPlayers()) do
+        local char = player.Character
+        if char then
+            local head = char:FindFirstChild("Head")
+            if head then
+                local bill = Instance.new("BillboardGui")
+                bill.Size = UDim2.fromOffset(200, 50)
+                bill.StudsOffset = Vector3.new(0, 3, 0)
+                bill.Parent = head
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, 0, 1, 0)
+                label.BackgroundTransparency = 1
+                label.Font = Enum.Font.GothamBold
+                label.Text = msg
+                label.TextColor3 = Color3.fromRGB(255, 255, 100)
+                label.TextSize = 24
+                label.Parent = bill
+                task.wait(3)
+                bill:Destroy()
+            end
+        end
+    end
+    notify("Broadcast sent")
+end
+
+function Server.Shutdown()
+    notify("Shutting down...")
+    task.wait(1)
+    game:Shutdown()
+end
+
+-- ============================================================
+--  📂 KATEGORIA: ITEMS
+-- ============================================================
+
+local Items = {}
+
+function Items.GiveItem(itemName)
+    notify("Item given: " .. itemName)
+end
+
+function Items.RemoveItem(itemName)
+    notify("Item removed: " .. itemName)
+end
+
+function Items.ListItems()
+    notify("Items: Sword, Shield, Potion")
+end
+
+-- ============================================================
+--  🎮 OBSŁUGA KLAWISZY (skróty)
+-- ============================================================
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.F then
+        Fun.Fly()
+    elseif input.KeyCode == Enum.KeyCode.R then
+        Fun.SpeedBoost(1.5)
+    elseif input.KeyCode == Enum.KeyCode.G then
+        Stats.GetCash()
+    elseif input.KeyCode == Enum.KeyCode.L then
+        Stats.GetLevel()
     end
 end)
 
-runBtn.MouseButton1Click:Connect(function()
-    if not configData then
-        status.Text = "⏳ Poczekaj na załadowanie konfiguracji..."
-        status.TextColor3 = Color3.fromRGB(230, 180, 80)
-        return
-    end
+-- ============================================================
+--  📋 LISTA DOSTĘPNYCH FUNKCJI (dla loadera)
+-- ============================================================
 
-    local id = idBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
-    if id == "" then
-        status.Text = "❌ Wpisz ID!"
-        status.TextColor3 = Color3.fromRGB(230, 100, 100)
-        return
-    end
-
-    local url = configData[id]
-    if not url then
-        status.Text = "❌ Nie znaleziono ID: " .. id
-        status.TextColor3 = Color3.fromRGB(230, 100, 100)
-        return
-    end
-
-    status.Text = "⏳ Pobieranie skryptu dla: " .. id
-    status.TextColor3 = Color3.fromRGB(230, 180, 80)
-    runScript(url)
-end)
-
-idBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        runBtn.MouseButton1Click:Fire()
-    end
-end)
-
-print("[LoaderID] Gotowy. Czekam na ID.")
+return {
+    name = "Example Script",
+    version = "1.0",
+    categories = {
+        Admin = {
+            "Kick",
+            "Ban",
+            "Mute",
+            "GiveRank",
+            "Reset"
+        },
+        Fun = {
+            "Fly",
+            "Fling",
+            "SpeedBoost",
+            "JumpBoost",
+            "Invisible"
+        },
+        Stats = {
+            "GetLevel",
+            "GetCash",
+            "GetPlaytime",
+            "GetFriends"
+        },
+        Server = {
+            "GetPing",
+            "GetPlayerCount",
+            "GetUptime",
+            "Broadcast",
+            "Shutdown"
+        },
+        Items = {
+            "GiveItem",
+            "RemoveItem",
+            "ListItems"
+        }
+    }
+}
