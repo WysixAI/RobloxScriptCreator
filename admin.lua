@@ -1,28 +1,21 @@
 -- ============================================================
--- ADMIN / INFO PANEL
--- Bez IP, adresu i dokładnej lokalizacji gracza
+--  ADMIN PANEL – poprawiona wersja (bez błędów składni)
 -- ============================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Usuń poprzednią kopię panelu, jeśli istnieje
-local oldGui = PlayerGui:FindFirstChild("AdminPanel")
-if oldGui then
-    oldGui:Destroy()
+-- Usuń stary panel, jeśli istnieje
+local old = PlayerGui:FindFirstChild("AdminPanel")
+if old then
+	old:Destroy()
 end
-
--- ============================================================
--- GUI
--- ============================================================
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AdminPanel"
 screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = false
 screenGui.Parent = PlayerGui
 
 local frame = Instance.new("Frame")
@@ -55,12 +48,12 @@ closeBtn.TextColor3 = Color3.fromRGB(255, 180, 180)
 closeBtn.TextSize = 16
 closeBtn.Parent = frame
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
-closeCorner.Parent = closeBtn
+local cCorner = Instance.new("UICorner")
+cCorner.CornerRadius = UDim.new(0, 8)
+cCorner.Parent = closeBtn
 
 closeBtn.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
+	screenGui:Destroy()
 end)
 
 local title = Instance.new("TextLabel")
@@ -76,90 +69,81 @@ title.Parent = frame
 
 local subtitle = Instance.new("TextLabel")
 subtitle.Size = UDim2.new(1, -40, 0, 22)
-subtitle.Position = UDim2.fromOffset(20, 45)
+subtitle.Position = UDim2.fromOffset(20, 48)
 subtitle.BackgroundTransparency = 1
 subtitle.Font = Enum.Font.Gotham
-subtitle.Text = "Dane dostępne lokalnie w Roblox"
+subtitle.Text = "Dane dostępne lokalnie"
 subtitle.TextColor3 = Color3.fromRGB(150, 150, 180)
 subtitle.TextSize = 12
-subtitle.TextXAlignment = Enum.TextXAlignment.Left
 subtitle.Parent = frame
 
 -- ============================================================
--- Dane bezpieczne dla panelu
+-- DANE
 -- ============================================================
 
-local function getPlatformName()
-    if UserInputService then
-        return "Nieznana"
-    end
-
-    return "Nieznana"
-end
-
-local function getInfo()
-    return {
-        {"👤 Nazwa", LocalPlayer.Name},
-        {"🆔 Display Name", LocalPlayer.DisplayName},
-        {"🔢 User ID", LocalPlayer.UserId},
-        {"📶 Ping", string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)},
-        {"👥 Gracze", string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)},
-        {"🎮 Place ID", game.PlaceId},
-        {"🖥️ Job ID", game.JobId ~= "" and game.JobId or "Studio / brak serwera"},
-        {"⏱️ Czas serwera", string.format("%.0f s", workspace:GetServerTimeNow())},
-        {"⚙️ Środowisko", RunService:IsStudio() and "Roblox Studio" or "Roblox"},
-    }
-end
+local infos = {
+	{"👤 Nazwa", LocalPlayer.Name},
+	{"🆔 User ID", tostring(LocalPlayer.UserId)},
+	{"📶 Ping", string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)},
+	{"👥 Gracze", string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)},
+	{"🎮 Place ID", tostring(game.PlaceId)},
+	{"🖥️ Job ID", (game.JobId ~= "" and game.JobId) or "Brak / Studio"},
+	{"⏱️ Serwer czas", string.format("%.0f s", workspace:GetServerTimeNow())},
+	{"⚙️ Środowisko", RunService:IsStudio() and "Roblox Studio" or "Gracz"},
+}
 
 -- ============================================================
--- Lista informacji
+-- RYSOWANIE LISTY
 -- ============================================================
 
 local labels = {}
-local yOffset = 78
+local y = 78
 
-for _, item in ipairs(getInfo()) do
-    local row = Instance.new("TextLabel")
-    row.Size = UDim2.new(1, -40, 0, 26)
-    row.Position = UDim2.fromOffset(20, yOffset)
-    row.BackgroundColor3 = Color3.fromRGB(25, 25, 42)
-    row.BackgroundTransparency = 0.25
-    row.BorderSizePixel = 0
-    row.Font = Enum.Font.Gotham
-    row.Text = item[1] .. ":  " .. tostring(item[2])
-    row.TextColor3 = Color3.fromRGB(210, 210, 230)
-    row.TextSize = 13
-    row.TextXAlignment = Enum.TextXAlignment.Left
-    row.Parent = frame
+for i, v in ipairs(infos) do
+	local row = Instance.new("TextLabel")
+	row.Size = UDim2.new(1, -40, 0, 26)
+	row.Position = UDim2.fromOffset(20, y)
+	row.BackgroundColor3 = Color3.fromRGB(25, 25, 42)
+	row.BackgroundTransparency = 0.25
+	row.BorderSizePixel = 0
+	row.Font = Enum.Font.Gotham
+	row.Text = v[1] .. ":  " .. tostring(v[2])
+	row.TextColor3 = Color3.fromRGB(210, 210, 230)
+	row.TextSize = 13
+	row.TextXAlignment = Enum.TextXAlignment.Left
+	row.Parent = frame
 
-    local rowCorner = Instance.new("UICorner")
-    rowCorner.CornerRadius = UDim.new(0, 7)
-    rowCorner.Parent = row
+	local rCorner = Instance.new("UICorner")
+	rCorner.CornerRadius = UDim.new(0, 7)
+	rCorner.Parent = row
 
-    table.insert(labels, row)
-    yOffset += 30
+	labels[i] = row
+	y = y + 30
 end
 
--- Odświeżaj tylko dynamiczne dane: ping, liczba graczy, czas serwera.
+-- ============================================================
+-- AKTUALIZACJA DYNAMICZNA (ping, gracze, czas)
+-- ============================================================
+
 task.spawn(function()
-    while screenGui.Parent do
-        if labels[4] then
-            labels[4].Text = "📶 Ping:  " ..
-                string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)
-        end
+	while screenGui and screenGui.Parent do
+		-- Ping (indeks 3)
+		if labels[3] then
+			labels[3].Text = "📶 Ping:  " .. string.format("%.0f ms", LocalPlayer:GetNetworkPing() * 1000)
+		end
 
-        if labels[5] then
-            labels[5].Text = "👥 Gracze:  " ..
-                string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)
-        end
+		-- Gracze (indeks 4)
+		if labels[4] then
+			labels[4].Text = "👥 Gracze:  " .. string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)
+		end
 
-        if labels[8] then
-            labels[8].Text = "⏱️ Czas serwera:  " ..
-                string.format("%.0f s", workspace:GetServerTimeNow())
-        end
+		-- Czas serwera (indeks 7)
+		if labels[7] then
+			labels[7].Text = "⏱️ Serwer czas:  " .. string.format("%.0f s", workspace:GetServerTimeNow())
+		end
 
-        task.wait(1)
-    end
+		task.wait(1)
+	end
 end)
 
-print("✅ Panel informacyjny uruchomiony.")
+print("✅ AdminPanel załadowany poprawnie.")
