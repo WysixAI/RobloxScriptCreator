@@ -1,5 +1,6 @@
 -- ============================================================
---  ADMIN PANEL – błyskawiczne otwieranie + IP XXXXXXXXXXX
+--  ADMIN PANEL – błyskawiczne otwieranie + IP
+--  POPRAWIONY: GetServerTime → GetServerTimeNow
 -- ============================================================
 
 local Players = game:GetService("Players")
@@ -89,7 +90,7 @@ local infos = {
     {"Gracze", string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)},
     {"Place ID", tostring(game.PlaceId)},
     {"Job ID", (game.JobId ~= "" and game.JobId) or "Brak"},
-    {"Czas serwera", string.format("%.0f s", workspace:GetServerTime())},
+    {"Czas serwera", string.format("%.0f s", workspace:GetServerTimeNow())},  -- ✅ POPRAWIONE
     {"Srodowisko", RunService:IsStudio() and "Roblox Studio" or "Gracz"},
     {"Adres IP", "Pobieranie..."},
     {"Kraj", "Pobieranie..."},
@@ -176,7 +177,7 @@ task.spawn(function()
             labels[4].Text = "Gracze:  " .. string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)
         end
         if labels[7] then
-            labels[7].Text = "Czas serwera:  " .. string.format("%.0f s", workspace:GetServerTime())
+            labels[7].Text = "Czas serwera:  " .. string.format("%.0f s", workspace:GetServerTimeNow())  -- ✅ POPRAWIONE
         end
         task.wait(1)
     end
